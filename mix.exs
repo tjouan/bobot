@@ -11,7 +11,9 @@ defmodule Bobot.Mixfile do
   end
 
   def application do
-    [applications: [:ssl]]
+    [
+      applications: [:ssl, :exmpp]
+    ]
   end
 
   defp deps do

@@ -6,18 +6,15 @@ defmodule Bobot do
     end
 
     def connect do
-      :application.start :exmpp
+      session = :exmpp_session.start
 
       host    = "im.a13.fr"
-      session = :exmpp_session.start
       jid     = :exmpp_jid.make "bobot", host, "origin"
+      pass    = "MYPASSWORD"
 
-      ehost = :erlang.binary_to_list host
-      epass = :erlang.binary_to_list "MYPASSWORD"
-
-      :exmpp_session.auth_basic_digest session, jid, epass
+      :exmpp_session.auth_basic_digest session, jid, String.to_char_list pass
       #:exmpp_session.connect_TCP session, ehost, 5222, starttls: :enabled
-      :exmpp_session.connect_SSL session, ehost, 5223
+      :exmpp_session.connect_SSL session, String.to_char_list(host), 5223
       :exmpp_session.login session
     end
   end
