@@ -1,0 +1,33 @@
+bots
+----
+
+https://github.com/scrogson/hedwig (elixir, exml)
+https://github.com/Mendor/urusai (erlang, OTP, exmpp)
+http://chiselapp.com/user/abbe/repository/SS (erlang, OTP, exmpp)
+https://github.com/mattias-lundell/rollex (erlang, OTP)
+https://github.com/mrshankly/isaac (erlang, OTP, exmpp)
+
+
+XMPP
+----
+
+https://github.com/processone/exmpp (erlang)
+  http://www.process-one.net/docs/exmpp/devdoc/trunk/
+
+
+XML
+---
+
+https://github.com/joshnuss/xml_builder
+https://github.com/paulgray/exml (erlang)
+
+net
+---
+
+https://github.com/meh/elixir-socket
+
+
+OTP
+---
+
+http://blog.jonharrington.org/elixir/2014/01/06/using-otp-from-elixir/
