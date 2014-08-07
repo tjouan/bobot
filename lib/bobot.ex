@@ -25,6 +25,7 @@ defmodule Bobot do
 
       muc_host  = "muc.im.a13.fr"
       muc_jid   = :exmpp_jid.make "arena", muc_host, "bobot"
+      room_jid  = :exmpp_jid.make "arena", muc_host
 
       packet = :exmpp_xml.append_child(
         :exmpp_stanza.set_sender(
@@ -37,9 +38,23 @@ defmodule Bobot do
         :exmpp_xml.element('http://jabber.org/protocol/muc', 'x')
       )
 
+      IO.puts inspect packet
       :exmpp_session.send_packet session, packet
 
-      :timer.sleep 8000
+      :timer.sleep 1000
+
+      msg_packet = :exmpp_stanza.set_sender(
+        :exmpp_stanza.set_recipient(
+          :exmpp_message.groupchat(String.to_char_list("bobot!")),
+          room_jid
+        ),
+        jid
+      )
+
+      IO.puts inspect msg_packet
+      :exmpp_session.send_packet session, msg_packet
+
+      :timer.sleep 1000
     end
   end
 end
