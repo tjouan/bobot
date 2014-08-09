@@ -43,7 +43,7 @@ defmodule Bobot.Client do
   def connect(state) do
     state = %Client{state | session: :exmpp_session.start}
 
-    :exmpp_session.auth_basic_digest state.session, state.jid, String.to_char_list state.password
+    :exmpp_session.auth_basic_digest state.session, state.jid, to_char_list state.password
     #:exmpp_session.connect_TCP session, ehost, 5222, starttls: :enabled
     :exmpp_session.connect_SSL state.session, :exmpp_jid.domain_as_list(state.jid), 5223
     :exmpp_session.login state.session
@@ -68,7 +68,7 @@ defmodule Bobot.Client do
   end
 
   def muc_msg(jid, room_jid, body) do
-    :exmpp_message.groupchat(String.to_char_list(body))
+    :exmpp_message.groupchat(to_char_list body)
     |> :exmpp_stanza.set_recipient(room_jid)
     |> :exmpp_stanza.set_sender(jid)
   end
