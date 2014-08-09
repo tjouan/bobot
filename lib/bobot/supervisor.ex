@@ -1,14 +1,13 @@
 defmodule Bobot.Supervisor do
   use Supervisor
 
-  def start_link do
-    Supervisor.start_link(__MODULE__, [])
+  def start_link(config) do
+    Supervisor.start_link(__MODULE__, config)
   end
 
-  def init([]) do
-    IO.puts "SUPERVISOR INIT"
+  def init(config) do
     children = [
-      worker(Bobot.Client, [])
+      worker(Bobot.Client, [config])
     ]
 
     supervise(children, strategy: :one_for_one)

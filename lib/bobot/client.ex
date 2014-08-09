@@ -1,14 +1,20 @@
 defmodule Bobot.Client do
   use GenServer
 
-  def start_link do
-    GenServer.start_link(__MODULE__, [])
+  alias Bobot.Client
+
+  defstruct jid: nil, password: nil, room: nil, session: nil
+
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, config)
   end
 
-  def init(args) do
-    IO.puts "CLIENT INIT #{inspect args}"
-    connect
-    state = []
+  def init(config) do
+    state = connect(%Client{
+      jid:      :exmpp_jid.parse(config.jid),
+      password: config.password,
+      room:     config.room
+    })
     {:ok, state}
   end
 
@@ -34,29 +40,23 @@ defmodule Bobot.Client do
     :ok
   end
 
-  def connect do
-    IO.puts "CLIENT CONNECT"
+  def connect(state) do
+    state = %Client{state | session: :exmpp_session.start}
 
-    session = :exmpp_session.start
-
-    host    = "im.a13.fr"
-    jid     = :exmpp_jid.make "bobot", host, "electrons"
-    pass    = "oRdc3MzUxwzeoMEC"
-
-    :exmpp_session.auth_basic_digest session, jid, String.to_char_list pass
+    :exmpp_session.auth_basic_digest state.session, state.jid, String.to_char_list state.password
     #:exmpp_session.connect_TCP session, ehost, 5222, starttls: :enabled
-    :exmpp_session.connect_SSL session, String.to_char_list(host), 5223
-    :exmpp_session.login session
+    :exmpp_session.connect_SSL state.session, :exmpp_jid.domain_as_list(state.jid), 5223
+    :exmpp_session.login state.session
 
     status = :exmpp_presence.set_status :exmpp_presence.available(), ""
-    :exmpp_session.send_packet session, status
+    :exmpp_session.send_packet state.session, status
 
-    muc_host  = "muc.im.a13.fr"
-    muc_jid   = :exmpp_jid.make "arena", muc_host, "bobot"
-    room_jid  = :exmpp_jid.make "arena", muc_host
+    muc_jid   = :exmpp_jid.parse state.room
+    room_jid  = :exmpp_jid.bare muc_jid
+    :exmpp_session.send_packet state.session, muc_join_packet(state.jid, muc_jid)
+    :exmpp_session.send_packet state.session, muc_msg(state.jid, room_jid, "bobot!")
 
-    :exmpp_session.send_packet session, muc_join_packet(jid, muc_jid)
-    :exmpp_session.send_packet session, muc_msg(jid, room_jid, "bobot!")
+    state
   end
 
   def muc_join_packet(jid, muc_jid) do
