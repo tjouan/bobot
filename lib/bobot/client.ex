@@ -60,25 +60,16 @@ defmodule Bobot.Client do
   end
 
   def muc_join_packet(jid, muc_jid) do
-    :exmpp_xml.append_child(
-      :exmpp_stanza.set_sender(
-        :exmpp_stanza.set_recipient(
-          :exmpp_presence.available(),
-          muc_jid
-        ),
-        jid
-      ),
-      :exmpp_xml.element('http://jabber.org/protocol/muc', 'x')
-    )
+    muc_element = :exmpp_xml.element('http://jabber.org/protocol/muc', 'x')
+    :exmpp_presence.available
+    |> :exmpp_stanza.set_recipient(muc_jid)
+    |> :exmpp_stanza.set_sender(jid)
+    |> :exmpp_xml.append_child(muc_element)
   end
 
   def muc_msg(jid, room_jid, body) do
-    :exmpp_stanza.set_sender(
-      :exmpp_stanza.set_recipient(
-        :exmpp_message.groupchat(String.to_char_list(body)),
-        room_jid
-      ),
-      jid
-    )
+    :exmpp_message.groupchat(String.to_char_list(body))
+    |> :exmpp_stanza.set_recipient(room_jid)
+    |> :exmpp_stanza.set_sender(jid)
   end
 end
