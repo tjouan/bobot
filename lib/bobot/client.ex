@@ -5,6 +5,17 @@ defmodule Bobot.Client do
 
   defstruct jid: nil, password: nil, room: nil, session: nil
 
+  import Record
+  defrecordp :received_packet,
+    Record.extract(:received_packet, from_lib: "exmpp/include/exmpp_client.hrl")
+  # packet_type, % message, iq, presence
+  # type_attr,   % depend on packet. Example: set, get, subscribe, etc
+  # from,        % JID
+  # id,          % Packet ID
+  # queryns,     % IQ only: Namespace of the query
+  # raw_packet   % raw exmpp record
+
+
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
   end
@@ -29,8 +40,46 @@ defmodule Bobot.Client do
     {:noreply, state}
   end
 
+  def handle_info(received_packet(packet_type: :message, type_attr: 'chat',
+    from: from, raw_packet: packet), state) do
+      from_jid  = :exmpp_jid.make from
+      body      = :exmpp_message.get_body packet
+      IO.puts "<#{:exmpp_jid.to_binary from_jid}> #{body}"
+      {:noreply, state}
+  end
+
+  def handle_info(received_packet(packet_type: :message, type_attr: 'groupchat',
+    from: from, raw_packet: packet), state) do
+      from_jid  = :exmpp_jid.make from
+      body      = :exmpp_message.get_body packet
+      if !msg_is_delayed(packet) do
+        IO.puts "<#{:exmpp_jid.to_binary from_jid}> #{body}"
+      end
+      {:noreply, state}
+  end
+
+  def handle_info(received_packet(packet_type: :message, type_attr: type_attr,
+    from: from, raw_packet: packet), state) do
+      IO.puts "------------------------------------------------------"
+      IO.puts "MESSAGE TYPE_ATTR: #{inspect type_attr}"
+      IO.puts "FPACKET: #{:exmpp_xml.document_to_list packet}"
+      IO.puts "------------------------------------------------------"
+      {:noreply, state}
+  end
+
+  def handle_info(received_packet(packet_type: packet_type, type_attr: type_attr,
+    from: from, raw_packet: packet), state) do
+      IO.puts "------------------------------------------------------"
+      IO.puts "PACKET TYPE: #{inspect type_attr}"
+      IO.puts "FPACKET: #{:exmpp_xml.document_to_list packet}"
+      IO.puts "------------------------------------------------------"
+      {:noreply, state}
+  end
+
   def handle_info(msg, state) do
-    #IO.puts "handle_info #{inspect msg}"
+    IO.puts "------------------------------------------------------"
+    IO.puts "MSG #{inspect msg}"
+    IO.puts "------------------------------------------------------"
     {:noreply, state}
   end
 
@@ -71,5 +120,12 @@ defmodule Bobot.Client do
     :exmpp_message.groupchat(to_char_list body)
     |> :exmpp_stanza.set_recipient(room_jid)
     |> :exmpp_stanza.set_sender(jid)
+  end
+
+  def msg_is_delayed(msg) do
+    case :exmpp_xml.get_element(msg, 'urn:xmpp:delay', 'delay') do
+      :undefined  -> false
+      _           -> true
+    end
   end
 end
