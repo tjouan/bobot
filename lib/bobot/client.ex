@@ -76,6 +76,11 @@ defmodule Bobot.Client do
       {:noreply, state}
   end
 
+  def handle_info({:DOWN, _monitor, :process, pid, :tcp_closed}, state) do
+    IO.puts "TCP session closed, reconnecting..."
+    {:noreply, connect(state)}
+  end
+
   def handle_info(msg, state) do
     IO.puts "------------------------------------------------------"
     IO.puts "MSG #{inspect msg}"
@@ -104,6 +109,8 @@ defmodule Bobot.Client do
     room_jid  = :exmpp_jid.bare muc_jid
     :exmpp_session.send_packet state.session, muc_join_packet(state.jid, muc_jid)
     :exmpp_session.send_packet state.session, muc_msg(state.jid, room_jid, "bobot!")
+
+    Process.monitor state.session
 
     state
   end
