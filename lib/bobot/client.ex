@@ -76,6 +76,11 @@ defmodule Bobot.Client do
       {:noreply, state}
   end
 
+  def handle_info({:stream_error, :conflict}, state) do
+    IO.puts "XMPP session conflict (same resource), stopping..."
+    {:stop, :normal, state}
+  end
+
   def handle_info({:DOWN, _monitor, :process, pid, :tcp_closed}, state) do
     IO.puts "TCP session closed, reconnecting..."
     {:noreply, connect(state)}
@@ -89,8 +94,8 @@ defmodule Bobot.Client do
   end
 
   def terminate(reason, state) do
-    IO.puts "terminate #{inspect reason}"
-    #:exmpp_session.stop session
+    IO.puts "Terminate: #{inspect reason}"
+    :exmpp_session.stop state.session
     :ok
   end
 

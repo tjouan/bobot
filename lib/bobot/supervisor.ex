@@ -7,7 +7,7 @@ defmodule Bobot.Supervisor do
 
   def init(config) do
     children = [
-      worker(Bobot.Client, [config])
+      worker(Bobot.Client, [config], restart: :transient)
     ]
 
     supervise(children, strategy: :one_for_one)
