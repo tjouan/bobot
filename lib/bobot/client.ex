@@ -70,7 +70,7 @@ defmodule Bobot.Client do
   def handle_info(received_packet(packet_type: packet_type, type_attr: type_attr,
     from: from, raw_packet: packet), state) do
       IO.puts "------------------------------------------------------"
-      IO.puts "PACKET TYPE: #{inspect type_attr}"
+      IO.puts "PACKET TYPE: #{inspect packet_type}"
       IO.puts "FPACKET: #{:exmpp_xml.document_to_list packet}"
       IO.puts "------------------------------------------------------"
       {:noreply, state}
