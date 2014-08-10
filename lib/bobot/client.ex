@@ -8,12 +8,8 @@ defmodule Bobot.Client do
   import Record
   defrecordp :received_packet,
     Record.extract(:received_packet, from_lib: "exmpp/include/exmpp_client.hrl")
-  # packet_type, % message, iq, presence
-  # type_attr,   % depend on packet. Example: set, get, subscribe, etc
-  # from,        % JID
-  # id,          % Packet ID
-  # queryns,     % IQ only: Namespace of the query
-  # raw_packet   % raw exmpp record
+  defrecordp :jid,
+    Record.extract(:jid, from_lib: "exmpp/include/exmpp_jid.hrl")
 
 
   def start_link(config) do
@@ -22,7 +18,7 @@ defmodule Bobot.Client do
 
   def init(config) do
     state = connect(%Client{
-      jid:      :exmpp_jid.parse(config.jid),
+      jid:      jid_randomize_resource(:exmpp_jid.parse(config.jid)),
       password: config.password,
       room:     config.room
     })
@@ -118,6 +114,13 @@ defmodule Bobot.Client do
     Process.monitor state.session
 
     state
+  end
+
+  def jid_randomize_resource(jid) do
+    resource = :crypto.rand_uniform(16777216, 4294967296)
+    |> Integer.to_string(16)
+    |> String.downcase
+    :exmpp_jid.make(jid(jid, :node), jid(jid, :domain), resource)
   end
 
   def muc_join_packet(jid, muc_jid) do
