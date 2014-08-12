@@ -2,26 +2,28 @@ defmodule Bobot.Client do
   use GenServer
 
   alias Bobot.Client
+  alias Bobot.XMPP
+  alias Bobot.XMPP.JID
+  alias Bobot.XMPP.Message
+  alias Bobot.XMPP.Packet
 
   defstruct jid: nil, password: nil, room: nil, session: nil
-
-  import Record
-  defrecordp :received_packet,
-    Record.extract(:received_packet, from_lib: "exmpp/include/exmpp_client.hrl")
-  defrecordp :jid,
-    Record.extract(:jid, from_lib: "exmpp/include/exmpp_jid.hrl")
 
 
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
   end
 
+
   def init(config) do
     state = connect(%Client{
-      jid:      jid_randomize_resource(:exmpp_jid.parse(config.jid)),
+      jid:      JID.build(config.jid),
       password: config.password,
-      room:     config.room
+      room:     JID.parse(config.room)
     })
+
+    XMPP.muc_join state.session, state.jid, state.room
+
     {:ok, state}
   end
 
@@ -36,40 +38,9 @@ defmodule Bobot.Client do
     {:noreply, state}
   end
 
-  def handle_info(received_packet(packet_type: :message, type_attr: 'chat',
-    from: from, raw_packet: packet), state) do
-      from_jid  = :exmpp_jid.make from
-      body      = :exmpp_message.get_body packet
-      IO.puts "<#{:exmpp_jid.to_binary from_jid}> #{body}"
-      {:noreply, state}
-  end
-
-  def handle_info(received_packet(packet_type: :message, type_attr: 'groupchat',
-    from: from, raw_packet: packet), state) do
-      from_jid  = :exmpp_jid.make from
-      body      = :exmpp_message.get_body packet
-      if !msg_is_delayed(packet) do
-        IO.puts "<#{:exmpp_jid.to_binary from_jid}> #{body}"
-      end
-      {:noreply, state}
-  end
-
-  def handle_info(received_packet(packet_type: :message, type_attr: type_attr,
-    from: from, raw_packet: packet), state) do
-      IO.puts "------------------------------------------------------"
-      IO.puts "MESSAGE TYPE_ATTR: #{inspect type_attr}"
-      IO.puts "FPACKET: #{:exmpp_xml.document_to_list packet}"
-      IO.puts "------------------------------------------------------"
-      {:noreply, state}
-  end
-
-  def handle_info(received_packet(packet_type: packet_type, type_attr: type_attr,
-    from: from, raw_packet: packet), state) do
-      IO.puts "------------------------------------------------------"
-      IO.puts "PACKET TYPE: #{inspect packet_type}"
-      IO.puts "FPACKET: #{:exmpp_xml.document_to_list packet}"
-      IO.puts "------------------------------------------------------"
-      {:noreply, state}
+  def handle_info(pkt, state) when is_tuple(pkt) and elem(pkt, 0) == :received_packet do
+    state = handle_packet Packet.build(pkt), state
+    {:noreply, state}
   end
 
   def handle_info({:stream_error, :conflict}, state) do
@@ -77,70 +48,63 @@ defmodule Bobot.Client do
     {:stop, :normal, state}
   end
 
-  def handle_info({:DOWN, _monitor, :process, pid, :tcp_closed}, state) do
+  def handle_info({:DOWN, _monitor, :process, _pid, :tcp_closed}, state) do
     IO.puts "TCP session closed, reconnecting..."
     {:noreply, connect(state)}
   end
 
   def handle_info(msg, state) do
-    IO.puts "------------------------------------------------------"
-    IO.puts "MSG #{inspect msg}"
-    IO.puts "------------------------------------------------------"
+    IO.puts "Error, unhandled msg: #{inspect msg}"
     {:noreply, state}
   end
 
   def terminate(reason, state) do
     IO.puts "Terminate: #{inspect reason}"
-    :exmpp_session.stop state.session
+    XMPP.stop_session state.session
     :ok
   end
 
-  def connect(state) do
-    state = %Client{state | session: :exmpp_session.start}
 
-    :exmpp_session.auth_basic_digest state.session, state.jid, to_char_list state.password
-    #:exmpp_session.connect_TCP session, ehost, 5222, starttls: :enabled
-    :exmpp_session.connect_SSL state.session, :exmpp_jid.domain_as_list(state.jid), 5223
-    :exmpp_session.login state.session
+  defp connect(state) do
+    session = XMPP.start_session state.jid, state.password
 
-    status = :exmpp_presence.set_status :exmpp_presence.available(), ""
-    :exmpp_session.send_packet state.session, status
+    XMPP.presence_set_available session
+    Process.monitor session
 
-    muc_jid   = :exmpp_jid.parse state.room
-    room_jid  = :exmpp_jid.bare muc_jid
-    :exmpp_session.send_packet state.session, muc_join_packet(state.jid, muc_jid)
-    :exmpp_session.send_packet state.session, muc_msg(state.jid, room_jid, "bobot!")
+    %Client{state | session: session}
+  end
 
-    Process.monitor state.session
-
+  defp handle_packet(%Packet{type: :presence} = packet, state) do
+    IO.puts "presence: <#{JID.to_s packet.from}> FIXME"
     state
   end
 
-  def jid_randomize_resource(jid) do
-    resource = :crypto.rand_uniform(16777216, 4294967296)
-    |> Integer.to_string(16)
-    |> String.downcase
-    :exmpp_jid.make(jid(jid, :node), jid(jid, :domain), resource)
+  defp handle_packet(%Packet{type: :message} = packet, state) do
+    handle_message Message.build(packet), state
+    state
   end
 
-  def muc_join_packet(jid, muc_jid) do
-    muc_element = :exmpp_xml.element('http://jabber.org/protocol/muc', 'x')
-    :exmpp_presence.available
-    |> :exmpp_stanza.set_recipient(muc_jid)
-    |> :exmpp_stanza.set_sender(jid)
-    |> :exmpp_xml.append_child(muc_element)
+  defp handle_packet(packet, state) do
+    IO.puts "PACKET: #{inspect packet}"
+    state
   end
 
-  def muc_msg(jid, room_jid, body) do
-    :exmpp_message.groupchat(to_char_list body)
-    |> :exmpp_stanza.set_recipient(room_jid)
-    |> :exmpp_stanza.set_sender(jid)
+  defp handle_message(%Message{type: :chat} = message, state) do
+    display_message message.from, message.body
+    state
   end
 
-  def msg_is_delayed(msg) do
-    case :exmpp_xml.get_element(msg, 'urn:xmpp:delay', 'delay') do
-      :undefined  -> false
-      _           -> true
-    end
+  defp handle_message(%Message{type: :groupchat} = message, state) do
+    display_message message.from, message.body
+    state
+  end
+
+  defp handle_message(message, state) do
+    IO.puts "XMPP UNKNOWN MESSAGE: #{inspect message}"
+    state
+  end
+
+  defp display_message(from, body) do
+    IO.puts "<#{JID.to_s from}> #{body}"
   end
 end
