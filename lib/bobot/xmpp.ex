@@ -40,7 +40,7 @@ defmodule Bobot.XMPP do
   def muc_packet_join(jid, room) do
     muc_element = :exmpp_xml.element('http://jabber.org/protocol/muc', 'x')
 
-    :exmpp_presence.available
+    :exmpp_xml.element('presence')
     |> :exmpp_stanza.set_recipient(room)
     |> :exmpp_stanza.set_sender(jid)
     |> :exmpp_xml.append_child(muc_element)
