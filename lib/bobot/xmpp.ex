@@ -5,7 +5,8 @@ defmodule Bobot.XMPP do
   def start_session(jid, password) do
     session = :exmpp_session.start
     :exmpp_session.auth_basic_digest session, jid, to_char_list password
-    :exmpp_session.connect_SSL session, :exmpp_jid.domain_as_list(jid), 5223
+    :exmpp_session.connect_TCP session, :exmpp_jid.domain_as_list(jid), 5222,
+      [{:starttls, :required}]
     :exmpp_session.login session
 
     session

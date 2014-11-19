@@ -12,7 +12,7 @@ defmodule Bobot.Mixfile do
 
   def application do
     [
-      applications: [:ssl, :exmpp],
+      applications: [:exmpp],
       mod: {Bobot, []}
     ]
   end
