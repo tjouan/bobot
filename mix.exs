@@ -5,7 +5,7 @@ defmodule Bobot.Mixfile do
     [
       app:      :bobot,
       version:  "0.0.1",
-      elixir:   "~> 0.14.3",
+      elixir:   "~> 1.0.2",
       deps:     deps
     ]
   end
