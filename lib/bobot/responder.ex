@@ -9,7 +9,7 @@ defmodule Bobot.Responder do
     case find_response(message) do
       {pattern, response_fmts} ->
         response = make_response pattern, response_fmts, message
-        delay = :random.uniform(@delay_max - @delay_min - 1) - 1 + @delay_min
+        delay = :crypto.rand_uniform @delay_min, @delay_max + 1
         Process.send_after(client, {:muc_say, response}, delay * 1000)
       _ ->
     end
