@@ -47,7 +47,7 @@ defmodule Bobot.XMPP do
   end
 
   def muc_packet_msg(jid, room, body) do
-    :exmpp_message.groupchat(to_char_list body)
+    :exmpp_message.groupchat(body)
     |> :exmpp_stanza.set_recipient(room)
     |> :exmpp_stanza.set_sender(jid)
   end
