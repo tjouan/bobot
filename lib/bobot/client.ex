@@ -2,6 +2,7 @@ defmodule Bobot.Client do
   use GenServer
 
   alias Bobot.Client
+  alias Bobot.Responder
   alias Bobot.XMPP
   alias Bobot.XMPP.JID
   alias Bobot.XMPP.Message
@@ -101,6 +102,7 @@ defmodule Bobot.Client do
 
   defp handle_message(%Message{type: :groupchat} = message, state) do
     display_message message.from, message.body
+    Responder.handle self(), message
     state
   end
 
