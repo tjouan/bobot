@@ -102,7 +102,7 @@ defmodule Bobot.Client do
 
   defp handle_message(%Message{type: :groupchat} = message, state) do
     display_message message.from, message.body
-    Responder.handle self(), message
+    if message.body != :undefined, do: Responder.handle(self(), message)
     state
   end
 
