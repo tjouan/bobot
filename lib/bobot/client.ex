@@ -43,6 +43,11 @@ defmodule Bobot.Client do
     {:noreply, state}
   end
 
+  def handle_info({:muc_say, message}, state) do
+    XMPP.muc_msg state.session, state.jid, state.room, message
+    {:noreply, state}
+  end
+
   def handle_info({:stream_error, :conflict}, state) do
     IO.puts "XMPP session conflict (same resource), stopping..."
     {:stop, :normal, state}
